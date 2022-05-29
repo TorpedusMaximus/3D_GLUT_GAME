@@ -31,14 +31,18 @@ int monstersNumber = 1;
 const int n = 50;
 
 vector<vector<char>>* map;
+int mapsize;
+int spawnFinish[2][2];
 
 point3** points;//siatka punktow
 point3** vectors;//wektory punktow powierzchni jajka
 
-static GLfloat viewer[] = { 10.0, 1.0, 0.0 , 10.0, 1.0 , 10.0 };//sterowanie kamera
+static GLfloat viewer[] = { 1.0, 1.5, 0.5 , 1.0, 1.5 , 1.0 };//sterowanie kamera
+static GLint gamer[2] = { 0, 5 };
 static GLfloat azymuth = 0;
 static GLfloat elevation = 0;
 char direction = 'w';
+const GLfloat speed = 0.2;
 
 static int x_pos_old = 0;//szczegoly sterowania kamera
 static int delta_x = 0;
@@ -80,7 +84,7 @@ void axes(void)
 }
 
 void printData() {//wypisanie parametrow symulacji na ekranie czas, predkosc, wspolrzedne kamery
-	const int characters = 80;
+	const int characters = 180;
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
@@ -100,6 +104,25 @@ void printData() {//wypisanie parametrow symulacji na ekranie czas, predkosc, ws
 		glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, s[i]);
 	}
 
+	glRasterPos2i(10, 950);
+	sprintf_s(s, "position x=%f, y=%f", viewer[0], viewer[2]);
+	for (int i = 0; i < characters; ++i) {
+		if (s[i] == ';') {
+			break;
+		}
+		glColor3f(1, 1, 1);
+		glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, s[i]);
+	}
+
+	glRasterPos2i(10, 930);
+	sprintf_s(s, "position x=%d, y=%d", gamer[0], gamer[1]);
+	for (int i = 0; i < characters; ++i) {
+		if (s[i] == ';') {
+			break;
+		}
+		glColor3f(1, 1, 1);
+		glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, s[i]);
+	}
 
 
 	glPopMatrix();
@@ -223,8 +246,8 @@ void egg(Data data) {
 }
 
 void turn(bool side) {
-	float d = M_PI / 20;
-	for (int i = 10; i > 0; i--) {
+	float d = M_PI / 40;
+	for (int i = 20; i > 0; i--) {
 		if (side) {
 			azymuth += d;
 		}
@@ -239,8 +262,6 @@ void turn(bool side) {
 	}
 
 }
-
-
 
 void RenderScene(void)
 {
@@ -258,7 +279,6 @@ void RenderScene(void)
 
 	glutSwapBuffers();//rysoawnie wygenerowanej sceny na ekranie
 }
-
 
 void Mouse(int btn, int state, int x, int y)
 {
@@ -309,43 +329,166 @@ void exitGame() {
 	exit(0);
 }
 
+bool checkAbility(flag directionFlag)
+{//check if can move
+	if (directionFlag) {//front
+		switch (direction) {
+		case 'n':
+			if ((*map)[gamer[0]][gamer[1] + 1] == ' ') {
+				return true;
+			}
+			else {
+				return false;
+			}
+		case 's':
+			if (gamer[1] < 1) {
+				return false;
+			}
+			if ((*map)[gamer[0]][gamer[1] - 1] == ' ') {
+				return true;
+			}
+			else {
+				return false;
+			}
+		case 'e':
+			if ((*map)[gamer[0] - 1][gamer[1]] == ' ') {
+				return true;
+			}
+			else {
+				return false;
+			}
+		case 'w':
+			if ((*map)[gamer[0] + 1][gamer[1]] == ' ') {
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
+	}
+	else {  //back
+		switch (direction) {
+		case 'n':
+			if ((*map)[gamer[0]][gamer[1] - 1] == ' ') {
+				return true;
+			}
+			else {
+				return false;
+			}
+		case 's':
+			if ((*map)[gamer[0]][gamer[1] + 1] == ' ') {
+				return true;
+			}
+			else {
+				return false;
+			}
+		case 'e':
+			if ((*map)[gamer[0] + 1][gamer[1]] == ' ') {
+				return true;
+			}
+			else {
+				return false;
+			}
+		case 'w':
+			if (gamer[0] < 1) {
+				return false;
+			}
+			if ((*map)[gamer[0] - 1][gamer[1]] == ' ') {
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
+	}
+}
+
+void winCondition() {
+	if (gamer[0] == spawnFinish[1][0] && gamer[1] == spawnFinish[1][1]) {
+		cout << "You won!!!!" << endl;
+		exitGame();
+	}
+}
+
 void keys(unsigned char key, int x, int y)
 {
+	mapRenderer.wildChange();
+	int tickRate = 10;
+	(*map)[gamer[0]][gamer[1]] = ' ';
 	switch (key) {
 	case 'w':
+		if (!checkAbility(true)) {
+			break;
+		}
 		if (direction == 'n') {
-			viewer[2] += 1;
-			viewer[5] += 1;
+			gamer[1] += 1;
+			for (int i = 0; i < tickRate; i++) {
+				viewer[2] += speed;
+				viewer[5] += speed;
+				RenderScene();
+			}
 		}
 		if (direction == 's') {
-			viewer[2] -= 1;
-			viewer[5] -= 1;
+			gamer[1] -= 1;
+			for (int i = 0; i < tickRate; i++) {
+				viewer[2] -= speed;
+				viewer[5] -= speed;
+				RenderScene();
+			}
 		}
 		if (direction == 'e') {
-			viewer[0] -= 1;
-			viewer[3] -= 1;
+			gamer[0] -= 1;
+			for (int i = 0; i < tickRate; i++) {
+				viewer[0] -= speed;
+				viewer[3] -= speed;
+				RenderScene();
+			}
 		}
 		if (direction == 'w') {
-			viewer[0] += 1;
-			viewer[3] += 1;
+			gamer[0] += 1;
+			for (int i = 0; i < tickRate; i++) {
+				viewer[0] += speed;
+				viewer[3] += speed;
+				RenderScene();
+			}
 		}
 		break;
 	case 's':
+		if (!checkAbility(false)) {
+			break;
+		}
 		if (direction == 'n') {
-			viewer[2] -= 1;
-			viewer[5] -= 1;
+			gamer[1] -= 1;
+			for (int i = 0; i < tickRate; i++) {
+				viewer[2] -= speed;
+				viewer[5] -= speed;
+				RenderScene();
+			}
 		}
 		if (direction == 's') {
-			viewer[2] += 1;
-			viewer[5] += 1;
+			gamer[1] += 1;
+			for (int i = 0; i < tickRate; i++) {
+				viewer[2] += speed;
+				viewer[5] += speed;
+				RenderScene();
+			}
 		}
 		if (direction == 'e') {
-			viewer[0] += 1;
-			viewer[3] += 1;
+			gamer[0] += 1;
+			for (int i = 0; i < tickRate; i++) {
+				viewer[0] += speed;
+				viewer[3] += speed;
+				RenderScene();
+			}
 		}
 		if (direction == 'w') {
-			viewer[0] -= 1;
-			viewer[3] -= 1;
+			gamer[0] -= 1;
+			for (int i = 0; i < tickRate; i++) {
+				viewer[0] -= speed;
+				viewer[3] -= speed;
+				RenderScene();
+			}
+
 		}
 		break;
 	case 'a':
@@ -387,6 +530,10 @@ void keys(unsigned char key, int x, int y)
 		break;
 	}
 
+	(*map)[gamer[0]][gamer[1]] = 'G';
+
+	winCondition();
+
 	RenderScene();
 }
 
@@ -400,7 +547,6 @@ void Motion(GLsizei x, GLsizei y)
 
 	glutPostRedisplay();
 }
-
 
 void ChangeSize(GLsizei horizontal, GLsizei vertical)
 {
@@ -424,7 +570,6 @@ void runMonster(Monster* monster) {
 		monster->run();
 	}
 }
-
 
 void createThreads() {
 	for (int i = 0; i < monstersNumber; i++) {
@@ -478,14 +623,44 @@ void loadMap() {
 	case 1:
 		monstersNumber = 4;
 		loaded = loadFile("maze5.txt", 11);
+		mapsize = 11;
+		viewer[2] = 11;
+		viewer[5] = 11;
+		(*map)[0][5] = 'G';
+		gamer[0] = 0;
+		gamer[1] = 5;
+		spawnFinish[0][0] = 0;
+		spawnFinish[0][1] = 5;
+		spawnFinish[1][0] = mapsize - 1;
+		spawnFinish[1][1] = 5;
 		break;
 	case 2:
 		monstersNumber = 8;
 		loaded = loadFile("maze10.txt", 21);
+		mapsize = 21;
+		viewer[2] = 21;
+		viewer[5] = 21;
+		(*map)[0][10] = 'G';
+		gamer[0] = 0;
+		gamer[1] = 12;
+		spawnFinish[0][0] = 0;
+		spawnFinish[0][1] = 12;
+		spawnFinish[1][0] = mapsize - 1;
+		spawnFinish[1][1] = 12;
 		break;
 	case 3:
 		monstersNumber = 12;
 		loaded = loadFile("maze39.txt", 31);
+		mapsize = 31;
+		viewer[2] = 31;
+		viewer[5] = 31;
+		(*map)[0][15] = 'G';
+		gamer[0] = 0;
+		gamer[1] = 15;
+		spawnFinish[0][0] = 0;
+		spawnFinish[0][1] = 15;
+		spawnFinish[1][0] = mapsize - 1;
+		spawnFinish[1][1] = 15;
 		break;
 	}
 
@@ -497,13 +672,10 @@ void loadMap() {
 	mapRenderer.insertMap(map);
 }
 
-
 int main(void)
 {
 	loadMap();
 	//createThreads();
-
-	mapRenderer.renderMap();
 
 	//points = new  point3 * [n + 1];//tablica punktow
 	//vectors = new point3 * [n + 1];//tablice
@@ -511,6 +683,7 @@ int main(void)
 	//	points[i] = new point3[n + 1];
 	//	vectors[i] = new point3[n + 1];
 	//}
+
 
 	srand(time(NULL));
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
